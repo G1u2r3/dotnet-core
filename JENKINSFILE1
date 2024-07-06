@@ -1,77 +1,33 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKER_CREDENTIALS = credentials('docker-credentials')
-        SONARQUBE_SERVER = 'SonarQube'
-        SONARQUBE_TOKEN = credentials('sonarqube-token')
-    }
-
     stages {
-        stage('Checkout') {
-            steps {
-                git 'https://your-repo-url.git'
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh 'dotnet sonarscanner begin /k:"your_project_key" /d:sonar.login=$SONARQUBE_TOKEN'
-                    sh 'dotnet build'
-                    sh 'dotnet sonarscanner end /d:sonar.login=$SONARQUBE_TOKEN'
-                }
-            }
-        }
-
-        stage('Unit Tests') {
-            steps {
-                sh 'dotnet test'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh 'docker build -t your-repo/your-app .'
-            }
-        }
-
-        stage('Push Docker Image') {
+        stage('Build') {
             steps {
                 script {
-                    docker.withRegistry('', 'docker-credentials') {
-                        sh 'docker push your-repo/your-app'
-                    }
+                    sh 'dotnet build --configuration Release'
                 }
             }
         }
-
-        stage('Deploy to Kubernetes') {
+        stage('Test') {
             steps {
-                sh 'kubectl apply -f k8s/deployment.yaml'
-                sh 'kubectl apply -f k8s/service.yaml'
+                script {
+                    sh 'dotnet test'
+                }
             }
         }
-
-        stage('Integration Tests') {
+        stage('Publish') {
             steps {
-                sh 'kubectl apply -f k8s/integration-tests.yaml'
+                script {
+                    sh 'dotnet publish --configuration Release --output ./publish'
+                }
             }
         }
     }
 
     post {
         always {
-            junit '**/test-results/*.xml'
-            cleanWs()
-        }
-
-        success {
-            echo 'Deployment successful!'
-        }
-
-        failure {
-            echo 'Deployment failed!'
+            archiveArtifacts artifacts: 'publish/**'
         }
     }
 }
