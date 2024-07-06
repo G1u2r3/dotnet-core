@@ -4,30 +4,8 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                script {
-                    sh 'dotnet build --configuration Release'
-                }
+                bat 'Whoami'
             }
-        }
-        stage('Test') {
-            steps {
-                script {
-                    sh 'dotnet test'
-                }
-            }
-        }
-        stage('Publish') {
-            steps {
-                script {
-                    sh 'dotnet publish --configuration Release --output ./publish'
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            archiveArtifacts artifacts: 'publish/**'
         }
     }
 }
